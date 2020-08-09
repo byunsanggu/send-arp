@@ -1,10 +1,7 @@
 #include <cstdio>
 #include <pcap.h>
-#include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <linux/if.h>
-#include <netdb.h>
-#include <string.h>
 #include "ethhdr.h"
 #include "arphdr.h"
 #define SIZE_ETHERNET 14
@@ -63,7 +60,6 @@ int main(int argc, char* argv[]) {
 
     sprintf(memac, "%02x:%02x:%02x:%02x:%02x:%02x",
            me_mac[0], me_mac[1], me_mac[2], me_mac[3],me_mac[4], me_mac[5]);
-    puts("mac\n");
 
     Mac s_mac = get_sendmac(handle, sip, memac, meip);
     ARP_reply(handle, sip, tip, memac, s_mac);
@@ -85,11 +81,12 @@ Mac get_sendmac(pcap_t* handle, Ip sip, char* memac, char* meip){
             printf("pcap_next_ex return %d(%s)\n", res, pcap_geterr(handle));
             break;
         }
-        puts("success next ex\n");
         eth_header = (struct EthHdr*)(packet);
         arp_header = (struct ArpHdr*)(packet+SIZE_ETHERNET);
-        if((eth_header->type_ == EthHdr::Arp) && (sip == Ip(arp_header->sip_))){
-            return Mac(arp_header->smac_);
+
+        if((eth_header->type_==0x0608) && (ntohl(sip)==arp_header->sip_) &&
+                (ntohl(Ip(meip))==arp_header->tip_)){
+            return arp_header->smac_;
         }
     }
     return NULL;
